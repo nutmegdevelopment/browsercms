@@ -10,7 +10,7 @@ class Cms::ContentController < Cms::ApplicationController
   before_filter :check_access_to_page,                  :only => [:show, :show_page_route]
 
 
-  
+
   # ----- Actions --------------------------------------------------------------
   def show
     render_page_with_caching
@@ -34,34 +34,34 @@ class Cms::ContentController < Cms::ApplicationController
   end
 
   private
-  
+
   # This is the method all actions delegate to
   # check_access_to_page will also call this directly
   # if caching is not enabled
   def render_page
     @_page_route.execute(self) if @_page_route
-    prepare_connectables_for_render 
+    prepare_connectables_for_render
     render :layout => @page.layout, :action => 'show'
   end
-  
+
   def render_page_with_caching
     render_page
     cache_page if perform_caching
   end
-  
+
   # ----- Before Filters -------------------------------------------------------
   def construct_path
     @path = "/#{params[:path]}"
     @paths = @path.split("/")
   end
-  
+
   def construct_path_from_route
     @_page_route = PageRoute.find(params[:_page_route_id])
     @path = @_page_route.page.path
     @initial_ivars = instance_variables
     eval @_page_route.code
   end
-  
+
   def redirect_non_cms_users_to_public_site
     @show_toolbar = false
     if perform_caching
@@ -87,20 +87,20 @@ class Cms::ContentController < Cms::ApplicationController
     @show_page_toolbar = @show_toolbar
     true
   end
-  
+
   def try_to_redirect
     if redirect = Redirect.find_by_from_path(@path)
-      redirect_to redirect.to_path
-    end    
+      redirect_to redirect.to_path, :status => :moved_permanently
+    end
   end
 
   def try_to_stream_file
     split = @paths.last.to_s.split('.')
     ext = split.size > 1 ? split.last.to_s.downcase : nil
-    
+
     #Only try to stream cache file if it has an extension
     unless ext.blank?
-      
+
       #Check access to file
       @attachment = Attachment.find_live_by_file_path(@path)
       if @attachment
@@ -112,15 +112,15 @@ class Cms::ContentController < Cms::ApplicationController
         #Stream the file if it exists
         if @path != "/" && File.exists?(@file)
           logger.warn "Sending file #{@file}"
-          send_file(@file, 
+          send_file(@file,
             :filename => @attachment.file_name,
             :type => @attachment.file_type,
             :disposition => "inline"
-          ) 
-        end    
+          )
+        end
       end
     end
-    
+
   end
 
   def check_access_to_page
@@ -130,8 +130,8 @@ class Cms::ContentController < Cms::ApplicationController
       if page = Page.first(:conditions => {:path => @path})
         @page = page.as_of_draft_version
       else
-        return render(:layout => 'cms/application', 
-          :template => 'cms/content/no_page', 
+        return render(:layout => 'cms/application',
+          :template => 'cms/content/no_page',
           :status => :not_found)
       end
     else
@@ -160,18 +160,18 @@ class Cms::ContentController < Cms::ApplicationController
     end
 
   end
-    
+
   # ----- Other Methods --------------------------------------------------------
-  
+
   def page_not_found
     raise ActiveRecord::RecordNotFound.new("No page at '#{@path}'")
   end
 
   def set_page_mode
     @mode = @show_toolbar && current_user.able_to?(:edit_content) ? (params[:mode] || session[:page_mode] || "edit") : "view"
-    session[:page_mode] = @mode      
+    session[:page_mode] = @mode
   end
-  
-  
-  
+
+
+
 end
